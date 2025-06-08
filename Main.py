@@ -1,5 +1,8 @@
 from GameInstance import GameInstance
 
-if __name__ == '__main__':
+def Start_Game():
     game = GameInstance()
     game.start()
+
+if __name__ == '__main__':
+    Start_Game()

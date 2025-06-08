@@ -1,9 +1,10 @@
 import os
 import time
 import threading
-import keyboard
+import msvcrt
 
-from GameObjects import Snake , Food
+from Snake import Snake
+from Food import Food
 from Difficulty import Difficults
 
 class GameInstance:
@@ -14,21 +15,23 @@ class GameInstance:
         self.EMPTY_CHAR = ' '
         self.WALL_CHAR = '#'
         self.score = 0
-        self.highscore = 0
+        self.HIGH_SCORE_FILE = 'highscore.txt'
+        self.highscore = self.load_highscore()
         self.difficulty = Difficults.choose_difficulty(self)
-
         self.snake = Snake(start_pos=(self.FIELD_SIZE // 2, self.FIELD_SIZE // 2))
         self.food = Food(self.FIELD_SIZE, self.snake.body)
 
+        self.direction_lock = threading.Lock()
         self.input_thread = threading.Thread(target=self.listen_input, daemon=True)
         self.input_thread.start()
 
     def listen_input(self):
         while True:
-            event = keyboard.read_event()
-            if event.event_type == keyboard.KEY_DOWN:
-                if event.name in ['w', 'a', 's', 'd']:
-                    self.snake.next_direction = event.name
+            while msvcrt.kbhit():
+                key = msvcrt.getch().decode('utf-8').lower()
+                if key in ['w', 'a', 's', 'd']:
+                    with self.direction_lock:
+                        self.snake.next_direction = key
 
     def update(self):
         grow = self.snake.get_head() == self.food.position
@@ -36,15 +39,26 @@ class GameInstance:
 
         if grow:
             self.score += 1
-            self.highscore = max(self.highscore, self.score)
+            if self.score > self.highscore:
+                self.highscore = self.score
+                self.save_highscore()
             self.food = Food(self.FIELD_SIZE, self.snake.body)
 
         if self.snake.check_collision(self.FIELD_SIZE):
             self.snake.alive = False
+    def load_highscore(self):
+        try:
+            with open(self.HIGH_SCORE_FILE, 'r') as f:
+                return int(f.read())
+        except (FileNotFoundError, ValueError):
+            return 0
 
-            self.draw()
-
+    def save_highscore(self):
+        with open(self.HIGH_SCORE_FILE, 'w') as f:
+            f.write(str(self.highscore))
     def draw(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
+
         field = [[self.EMPTY_CHAR for _ in range(self.FIELD_SIZE)] for _ in range(self.FIELD_SIZE)]
 
         for i in range(self.FIELD_SIZE):
@@ -59,15 +73,28 @@ class GameInstance:
         for i, (x, y) in enumerate(self.snake.body):
             field[y][x] = self.SNAKE_CHAR if i == 0 else 'o'
 
-        output = f"\x1b[HСчёт: {self.score}  Рекорд: {self.highscore}\n"
-        output += '\n'.join(''.join(row) for row in field)
-        print(output)
+        lines = []
+        lines.append(f"СЧЁТ: {self.score}    РЕКОРД: {self.highscore}")
+        lines.append('-' * self.FIELD_SIZE)
+        lines.extend(''.join(row) for row in field)
+        lines.append('-' * self.FIELD_SIZE)
+        print('\n'.join(lines))
+
+    def flush_input(self):
+        while msvcrt.kbhit():
+            msvcrt.getch()
 
     def start(self):
-        while self.snake.alive:
-            self.update()
-            time.sleep(self.difficulty)
+        while True:
+            while self.snake.alive:
+                self.update()
+                self.draw()
+                time.sleep(self.difficulty)
 
-        print("Игра окончена! Нажмите Enter для выхода.")
-        input()
-
+            print("Game Over \n1 — Начать заново\n2 — Выйти")
+            self.flush_input()  # ← Очищаем мусор из буфера
+            inp = input()
+            if inp == "2":
+                break
+            elif inp == "1":
+                self.__init__()
