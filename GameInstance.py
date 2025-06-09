@@ -57,7 +57,7 @@ class GameInstance:
         with open(self.HIGH_SCORE_FILE, 'w') as f:
             f.write(str(self.highscore))
     def draw(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
+        os.system('cls')
 
         field = [[self.EMPTY_CHAR for _ in range(self.FIELD_SIZE)] for _ in range(self.FIELD_SIZE)]
 
@@ -92,7 +92,7 @@ class GameInstance:
                 time.sleep(self.difficulty)
 
             print("Game Over \n1 — Начать заново\n2 — Выйти")
-            self.flush_input()  # ← Очищаем мусор из буфера
+            self.flush_input()
             inp = input()
             if inp == "2":
                 break
