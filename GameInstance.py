@@ -57,8 +57,7 @@ class GameInstance:
         with open(self.HIGH_SCORE_FILE, 'w') as f:
             f.write(str(self.highscore))
     def draw(self):
-        os.system('cls')
-
+        print('\033[H', end='')
         field = [[self.EMPTY_CHAR for _ in range(self.FIELD_SIZE)] for _ in range(self.FIELD_SIZE)]
 
         for i in range(self.FIELD_SIZE):
@@ -85,12 +84,13 @@ class GameInstance:
             msvcrt.getch()
 
     def start(self):
+        os.system('cls')
         while True:
             while self.snake.alive:
                 self.update()
                 self.draw()
                 time.sleep(self.difficulty)
-
+            os.system('cls')
             print("Game Over \n1 — Начать заново\n2 — Выйти")
             self.flush_input()
             inp = input()
